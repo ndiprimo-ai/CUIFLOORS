@@ -812,7 +812,7 @@ function CustomerProfile({ k, customers, setCustomers, onBack, showToast }) {
               {c.notes && <div style={{fontSize:12,color:"#374151",marginTop:6,fontStyle:"italic"}}>"{c.notes}"</div>}
             </div>
           </div>
-          <div style={{display:"flex",gap:8",flexWrap:"wrap"}}>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
             <Btn onClick={()=>showToast(`Reminder sent to ${c.name}`)}>Send reminder</Btn>
             <Btn onClick={()=>showToast(`Statement emailed to ${c.email}`)}>Email statement</Btn>
             <Btn primary onClick={()=>showToast(`Pay Now link sent to ${c.email}`)}>Send Pay Now link</Btn>
