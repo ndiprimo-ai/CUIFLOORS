@@ -1,3 +1,5 @@
-node_modules
-dist
-.env
+[build]
+  base = "cui-ar-dashboard"
+  command = "npm install && npm run build"
+  publish = "cui-ar-dashboard/dist"
+ 
