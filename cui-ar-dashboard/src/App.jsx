@@ -1131,7 +1131,7 @@ function CustomerProfile({ k, customers, setCustomers, mgmtCompanies, onBack, sh
 
       {/* Tabs */}
       <div style={{display:"flex",borderBottom:"1px solid #e5e7eb",marginBottom:16}}>
-        {[["timeline","Timeline"],["invoices","Invoices"],["trend","Payment Trend"],["terms","Terms & Credit"]].map(([id,lbl])=>(
+        {[["timeline","Timeline"],["invoices","Invoices"],["trend","Payment Trend"],["terms","Terms & Credit"],["contacts","Contacts"]].map(([id,lbl])=>(
           <button key={id} onClick={()=>setTab(id)} style={{
             padding:"8px 16px",fontSize:13,fontWeight:tab===id?600:400,
             color:tab===id?"#111827":"#6b7280",background:"none",border:"none",cursor:"pointer",
@@ -1206,46 +1206,266 @@ function CustomerProfile({ k, customers, setCustomers, mgmtCompanies, onBack, sh
       )}
 
       {tab==="terms" && (
-        <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:20}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-            <div style={{fontSize:13,fontWeight:600,color:"#111827"}}>Terms & Credit Settings</div>
-            <Btn primary small onClick={()=>showToast("Terms saved!")}>Save changes</Btn>
+        <EditTermsTab c={c} k={k} setCustomers={setCustomers} mgmtCompanies={mgmtCompanies} showToast={showToast}/>
+      )}
+
+      {tab==="contacts" && (
+        <ContactsTab c={c} k={k} setCustomers={setCustomers} showToast={showToast}/>
+      )}
+    </div>
+  );
+}
+
+// ─── EDIT TERMS TAB ──────────────────────────────────────────────────────────
+function EditTermsTab({ c, k, setCustomers, mgmtCompanies, showToast }) {
+  const [form, setForm] = useState({
+    name: c.name||"",
+    email: c.email||"",
+    phone: c.phone||"",
+    contactName: c.contactName||"",
+    customerType: c.customerType||"property",
+    terms: c.terms||30,
+    limit: c.limit||10000,
+    latefee: c.latefee||0,
+    grace: c.grace||0,
+    tier: c.tier||"standard",
+    remind: c.remind||"standard",
+    review: c.review||"",
+    mgmtCompany: c.mgmtCompany||"independent",
+    notes: c.notes||"",
+  });
+  const [saved, setSaved] = useState(false);
+  const sf = (f,v) => setForm(p=>({...p,[f]:v}));
+  const iStyle = {width:"100%",padding:"8px 10px",fontSize:12,border:"1px solid #e5e7eb",borderRadius:8,fontFamily:"inherit",color:"#111827",background:"#fff"};
+  const lStyle = {display:"block",fontSize:11,fontWeight:500,color:"#6b7280",textTransform:"uppercase",letterSpacing:".05em",marginBottom:5};
+
+  const handleSave = () => {
+    setCustomers(prev=>({...prev,[k]:{...prev[k],...form,terms:Number(form.terms),limit:Number(form.limit),latefee:Number(form.latefee),grace:Number(form.grace)}}));
+    setSaved(true);
+    setTimeout(()=>setSaved(false),2500);
+    showToast("Changes saved!");
+  };
+
+  return (
+    <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:600,color:"#111827"}}>Edit Account Details</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>Changes apply immediately across the dashboard</div>
+        </div>
+        <Btn primary onClick={handleSave} style={{background:saved?"#16a34a":undefined}}>
+          {saved?"✓ Saved!":"Save Changes"}
+        </Btn>
+      </div>
+
+      {/* Section: Identity */}
+      <div style={{marginBottom:18}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:10,paddingBottom:6,borderBottom:"1px solid #f3f4f6"}}>🏢 Account Identity</div>
+        <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr",gap:12}}>
+          <div>
+            <label style={lStyle}>Company / Property Name</label>
+            <input value={form.name} onChange={e=>sf("name",e.target.value)} style={iStyle}/>
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-            {[
-              {label:"Pay Terms",value:`NET ${c.terms} days`},
-              {label:"Account Tier",value:c.tier.charAt(0).toUpperCase()+c.tier.slice(1)},
-              {label:"Credit Limit",value:fmt(c.limit)},
-              {label:"Late Fee",value:c.latefee>0?`${c.latefee}% / month`:"None"},
-              {label:"Grace Period",value:c.grace>0?`${c.grace} days`:"None"},
-              {label:"Reminder Schedule",value:c.remind.charAt(0).toUpperCase()+c.remind.slice(1)},
-              {label:"Review Date",value:c.review},
-              {label:"Hold Trigger",value:"At 90% credit"},
-            ].map(f=>(
-              <div key={f.label}>
-                <label style={{display:"block",fontSize:11,fontWeight:500,color:"#6b7280",textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>{f.label}</label>
-                <div style={{padding:"8px 12px",background:"#f9fafb",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,color:"#111827"}}>{f.value}</div>
-              </div>
-            ))}
-            {/* Management Company dropdown */}
-            <div style={{gridColumn:"1/-1"}}>
-              <label style={{display:"block",fontSize:11,fontWeight:500,color:"#6b7280",textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>Management Company</label>
-              <select
-                value={c.mgmtCompany||"independent"}
-                onChange={e=>{
-                  setCustomers(prev=>({...prev,[k]:{...prev[k],mgmtCompany:e.target.value}}));
-                  showToast("Management company updated!");
-                }}
-                style={{width:"100%",padding:"8px 12px",border:"1px solid #e5e7eb",borderRadius:8,fontSize:13,color:"#111827",background:"#fff",fontFamily:"inherit",cursor:"pointer"}}>
-                {Object.values(mgmtCompanies||{}).map(m=>(
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
-              <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>Assigns this property to a management company for parent-level reporting.</div>
-            </div>
+          <div>
+            <label style={lStyle}>Customer Type</label>
+            <select value={form.customerType} onChange={e=>sf("customerType",e.target.value)} style={{...iStyle,cursor:"pointer"}}>
+              <option value="property">🏢 Property</option>
+              <option value="management-company">👥 Management Company</option>
+              <option value="general-contractor">🔨 General Contractor</option>
+            </select>
+          </div>
+          <div>
+            <label style={lStyle}>Account Tier</label>
+            <select value={form.tier} onChange={e=>sf("tier",e.target.value)} style={{...iStyle,cursor:"pointer"}}>
+              <option value="vip">⭐ VIP</option>
+              <option value="preferred">💙 Preferred</option>
+              <option value="standard">Standard</option>
+              <option value="watch">⚠️ Watch</option>
+              <option value="hold">🔴 Hold</option>
+            </select>
           </div>
         </div>
+      </div>
+
+      {/* Section: Contact */}
+      <div style={{marginBottom:18}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:10,paddingBottom:6,borderBottom:"1px solid #f3f4f6"}}>📞 Primary Contact</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <div>
+            <label style={lStyle}>AR / Billing Email</label>
+            <input value={form.email} onChange={e=>sf("email",e.target.value)} type="email" placeholder="billing@company.com" style={iStyle}/>
+          </div>
+          <div>
+            <label style={lStyle}>Contact Name</label>
+            <input value={form.contactName} onChange={e=>sf("contactName",e.target.value)} placeholder="Jane Smith" style={iStyle}/>
+          </div>
+          <div>
+            <label style={lStyle}>Phone</label>
+            <input value={form.phone} onChange={e=>sf("phone",e.target.value)} placeholder="(617) 555-0100" style={iStyle}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Management Company */}
+      {form.customerType !== "management-company" && (
+        <div style={{marginBottom:18}}>
+          <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:10,paddingBottom:6,borderBottom:"1px solid #f3f4f6"}}>👥 Management Company</div>
+          <select value={form.mgmtCompany} onChange={e=>sf("mgmtCompany",e.target.value)} style={{...iStyle,cursor:"pointer",maxWidth:400}}>
+            <option value="independent">— Independent (no management company)</option>
+            {Object.values(mgmtCompanies||{}).filter(m=>m.id!=="independent").map(m=>(
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+          <div style={{fontSize:11,color:"#9ca3af",marginTop:4}}>Changing this reassigns the property for portfolio reporting</div>
+        </div>
       )}
+
+      {/* Section: Financial Terms */}
+      <div style={{marginBottom:18}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:10,paddingBottom:6,borderBottom:"1px solid #f3f4f6"}}>💰 Financial Terms & Credit</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:12}}>
+          <div>
+            <label style={lStyle}>Payment Terms</label>
+            <select value={form.terms} onChange={e=>sf("terms",Number(e.target.value))} style={{...iStyle,cursor:"pointer"}}>
+              {[15,30,45,60,90,120].map(t=><option key={t} value={t}>NET {t}</option>)}
+            </select>
+          </div>
+          <div>
+            <label style={lStyle}>Credit Limit</label>
+            <div style={{position:"relative"}}>
+              <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",color:"#6b7280",fontSize:12}}>$</span>
+              <input value={form.limit} onChange={e=>sf("limit",e.target.value.replace(/[^0-9]/g,""))} style={{...iStyle,paddingLeft:22}}/>
+            </div>
+          </div>
+          <div>
+            <label style={lStyle}>Late Fee (% / mo)</label>
+            <div style={{position:"relative"}}>
+              <input value={form.latefee} onChange={e=>sf("latefee",e.target.value)} placeholder="1.5" style={{...iStyle,paddingRight:22}}/>
+              <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",color:"#6b7280",fontSize:12}}>%</span>
+            </div>
+          </div>
+          <div>
+            <label style={lStyle}>Grace Period (days)</label>
+            <input value={form.grace} onChange={e=>sf("grace",e.target.value.replace(/[^0-9]/g,""))} placeholder="5" style={iStyle}/>
+          </div>
+        </div>
+      </div>
+
+      {/* Section: Collections */}
+      <div style={{marginBottom:18}}>
+        <div style={{fontSize:12,fontWeight:600,color:"#374151",marginBottom:10,paddingBottom:6,borderBottom:"1px solid #f3f4f6"}}>📬 Collections & Reminders</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <div>
+            <label style={lStyle}>Reminder Schedule</label>
+            <select value={form.remind} onChange={e=>sf("remind",e.target.value)} style={{...iStyle,cursor:"pointer"}}>
+              <option value="gentle">🟢 Gentle — single soft reminder</option>
+              <option value="standard">🔵 Standard — +1, +7, +14 days</option>
+              <option value="aggressive">🔴 Aggressive — +1, +3, +7, +14 escalate</option>
+            </select>
+          </div>
+          <div>
+            <label style={lStyle}>Review Date</label>
+            <input value={form.review} onChange={e=>sf("review",e.target.value)} type="date" style={iStyle}/>
+          </div>
+          <div>
+            <label style={lStyle}>Internal Notes</label>
+            <input value={form.notes} onChange={e=>sf("notes",e.target.value)} placeholder="Notes visible to your team only" style={iStyle}/>
+          </div>
+        </div>
+      </div>
+
+      <div style={{display:"flex",justifyContent:"flex-end",gap:10,paddingTop:4}}>
+        <Btn onClick={()=>setForm({name:c.name,email:c.email,phone:c.phone||"",contactName:c.contactName||"",customerType:c.customerType||"property",terms:c.terms,limit:c.limit,latefee:c.latefee,grace:c.grace,tier:c.tier,remind:c.remind,review:c.review,mgmtCompany:c.mgmtCompany||"independent",notes:c.notes||""})}>Reset</Btn>
+        <Btn primary onClick={handleSave} style={{background:saved?"#16a34a":undefined}}>
+          {saved?"✓ Saved!":"Save Changes"}
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+// ─── CONTACTS TAB ─────────────────────────────────────────────────────────────
+function ContactsTab({ c, k, setCustomers, showToast }) {
+  const contacts = c.contacts || [{name:c.contactName||"",email:c.email||"",phone:c.phone||"",role:"Primary AR Contact",isPrimary:true}];
+  const [list, setList] = useState(contacts);
+
+  const update = (i, field, val) => setList(prev => prev.map((ct,idx) => idx===i ? {...ct,[field]:val} : ct));
+  const addContact = () => setList(prev=>[...prev,{name:"",email:"",phone:"",role:"",isPrimary:false}]);
+  const removeContact = (i) => setList(prev=>prev.filter((_,idx)=>idx!==i));
+  const setPrimary = (i) => setList(prev=>prev.map((ct,idx)=>({...ct,isPrimary:idx===i})));
+
+  const handleSave = () => {
+    setCustomers(prev=>({...prev,[k]:{...prev[k],contacts:list,contactName:list[0]?.name||"",email:list[0]?.email||c.email,phone:list[0]?.phone||""}}));
+    showToast("Contacts saved!");
+  };
+
+  const iStyle = {width:"100%",padding:"7px 10px",fontSize:12,border:"1px solid #e5e7eb",borderRadius:7,fontFamily:"inherit",color:"#111827",background:"#fff"};
+  const lStyle = {display:"block",fontSize:10,fontWeight:500,color:"#6b7280",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4};
+
+  return (
+    <div style={{background:"#fff",borderRadius:12,border:"1px solid #e5e7eb",padding:20}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <div style={{fontSize:14,fontWeight:600,color:"#111827"}}>Contacts</div>
+          <div style={{fontSize:12,color:"#6b7280",marginTop:1}}>{list.length} contact{list.length!==1?"s":""} · The primary contact receives all AR reminders</div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <Btn onClick={addContact}>+ Add Another Contact</Btn>
+          <Btn primary onClick={handleSave}>Save Contacts</Btn>
+        </div>
+      </div>
+
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {list.map((ct,i)=>(
+          <div key={i} style={{border:`1px solid ${ct.isPrimary?"#bfdbfe":"#e5e7eb"}`,borderRadius:10,padding:16,background:ct.isPrimary?"#eff6ff":"#fafafa",position:"relative"}}>
+            {/* Header row */}
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{width:28,height:28,borderRadius:"50%",background:ct.isPrimary?"#dbeafe":"#f3f4f6",display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:700,color:ct.isPrimary?"#1d4ed8":"#6b7280"}}>
+                  {ct.name ? ct.name.trim().split(" ").map(w=>w[0]).join("").toUpperCase().slice(0,2) : (i+1).toString()}
+                </div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:600,color:"#111827"}}>{ct.name||`Contact ${i+1}`}</div>
+                  {ct.isPrimary && <span style={{fontSize:10,fontWeight:600,color:"#1d4ed8",background:"#dbeafe",padding:"1px 6px",borderRadius:10}}>★ PRIMARY</span>}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6}}>
+                {!ct.isPrimary && (
+                  <Btn small onClick={()=>setPrimary(i)}>Set as Primary</Btn>
+                )}
+                {list.length > 1 && (
+                  <Btn small danger onClick={()=>removeContact(i)}>Remove</Btn>
+                )}
+              </div>
+            </div>
+
+            {/* Fields */}
+            <div style={{display:"grid",gridTemplateColumns:"2fr 2fr 1fr 2fr",gap:10}}>
+              <div>
+                <label style={lStyle}>Full Name</label>
+                <input value={ct.name} onChange={e=>update(i,"name",e.target.value)} placeholder="Jane Smith" style={iStyle}/>
+              </div>
+              <div>
+                <label style={lStyle}>Email</label>
+                <input value={ct.email} onChange={e=>update(i,"email",e.target.value)} type="email" placeholder="jane@company.com" style={iStyle}/>
+              </div>
+              <div>
+                <label style={lStyle}>Phone</label>
+                <input value={ct.phone} onChange={e=>update(i,"phone",e.target.value)} placeholder="(617) 555-0100" style={iStyle}/>
+              </div>
+              <div>
+                <label style={lStyle}>Role / Title</label>
+                <input value={ct.role} onChange={e=>update(i,"role",e.target.value)} placeholder="e.g. AP Manager, Owner, Controller" style={iStyle}/>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{marginTop:16,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <Btn onClick={addContact} style={{color:"#2563eb",borderColor:"#bfdbfe",background:"#eff6ff"}}>+ Add Another Contact</Btn>
+        <Btn primary onClick={handleSave}>Save Contacts</Btn>
+      </div>
     </div>
   );
 }
@@ -1374,8 +1594,9 @@ function MgmtCompaniesView({ mgmtCompanies, setMgmtCompanies, customers, onMgmt,
 }
 
 // ─── MANAGEMENT COMPANY PROFILE VIEW ────────────────────────────────────────
-function MgmtProfileView({ id, mgmtCompanies, customers, onCustomer, onBack, showToast }) {
+function MgmtProfileView({ id, mgmtCompanies, setMgmtCompanies, customers, onCustomer, onBack, showToast }) {
   const m = mgmtCompanies[id];
+  const [tab, setTab] = useState("overview");
   const allKeys = Object.keys(customers);
   const props = allKeys.filter(k=>customers[k].mgmtCompany===id);
 
@@ -1415,6 +1636,9 @@ function MgmtProfileView({ id, mgmtCompanies, customers, onCustomer, onBack, sho
             </div>
           </div>
           <div style={{display:"flex",gap:8}}>
+            <Btn onClick={()=>setTab(tab==="edit"?"overview":"edit")} primary={tab==="edit"}>
+              {tab==="edit"?"← Back to Overview":"✏️ Edit Company"}
+            </Btn>
             <Btn onClick={()=>showToast(`Statement sent to ${m.email}`)}>Send portfolio statement</Btn>
             <Btn primary onClick={()=>showToast(`Digest sent to ${m.contact}!`)}>Send digest</Btn>
           </div>
@@ -1437,8 +1661,8 @@ function MgmtProfileView({ id, mgmtCompanies, customers, onCustomer, onBack, sho
         </div>
       </div>
 
+      {tab==="overview" && (<>
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:16}}>
-        {/* Cash collection chart */}
         <div style={{background:"#fff",borderRadius:12,padding:20,border:"1px solid #e5e7eb"}}>
           <div style={{fontSize:13,fontWeight:600,color:"#111827",marginBottom:4}}>Portfolio Cash Collection</div>
           <div style={{fontSize:11,color:"#6b7280",marginBottom:12}}>All properties combined · last 6 months</div>
@@ -1522,6 +1746,73 @@ function MgmtProfileView({ id, mgmtCompanies, customers, onCustomer, onBack, sho
             })}
           </tbody>
         </table>
+      </div>
+      </>)}
+
+      {/* ── EDIT TAB ─────────────────────────────────────────── */}
+      {tab==="edit" && (
+        <EditMgmtCompanyForm m={m} id={id} setMgmtCompanies={setMgmtCompanies} showToast={showToast} onDone={()=>setTab("overview")}/>
+      )}
+    </div>
+  );
+}
+
+// ─── EDIT MANAGEMENT COMPANY FORM ────────────────────────────────────────────
+function EditMgmtCompanyForm({ m, id, setMgmtCompanies, showToast, onDone }) {
+  const [form, setForm] = useState({
+    name: m.name||"",
+    email: m.email||"",
+    contact: m.contact||"",
+    phone: m.phone||"",
+    notes: m.notes||"",
+  });
+  const [saved, setSaved] = useState(false);
+  const sf = (f,v) => setForm(p=>({...p,[f]:v}));
+  const iStyle = {width:"100%",padding:"8px 10px",fontSize:12,border:"1px solid #e5e7eb",borderRadius:8,fontFamily:"inherit",color:"#111827",background:"#fff"};
+  const lStyle = {display:"block",fontSize:11,fontWeight:500,color:"#6b7280",textTransform:"uppercase",letterSpacing:".05em",marginBottom:5};
+
+  const handleSave = () => {
+    const initials = form.name.trim().split(/\s+/).map(w=>w[0]).join("").toUpperCase().slice(0,2);
+    setMgmtCompanies(prev=>({...prev,[id]:{...prev[id],...form,initials}}));
+    setSaved(true);
+    setTimeout(()=>{setSaved(false);onDone();},1200);
+    showToast("Company updated!");
+  };
+
+  return (
+    <div style={{background:"#fff",borderRadius:12,border:"2px solid #6d28d9",padding:24}}>
+      <div style={{fontSize:14,fontWeight:600,color:"#111827",marginBottom:4}}>Edit Management Company</div>
+      <div style={{fontSize:12,color:"#6b7280",marginBottom:20}}>Changes apply immediately across all linked properties</div>
+
+      <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:14,marginBottom:14}}>
+        <div>
+          <label style={lStyle}>Company Name</label>
+          <input value={form.name} onChange={e=>sf("name",e.target.value)} style={iStyle}/>
+        </div>
+        <div>
+          <label style={lStyle}>Primary Contact Name</label>
+          <input value={form.contact} onChange={e=>sf("contact",e.target.value)} placeholder="Contact name" style={iStyle}/>
+        </div>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        <div>
+          <label style={lStyle}>AR / Billing Email</label>
+          <input value={form.email} onChange={e=>sf("email",e.target.value)} type="email" placeholder="ar@company.com" style={iStyle}/>
+        </div>
+        <div>
+          <label style={lStyle}>Phone</label>
+          <input value={form.phone} onChange={e=>sf("phone",e.target.value)} placeholder="(617) 555-0100" style={iStyle}/>
+        </div>
+      </div>
+      <div style={{marginBottom:20}}>
+        <label style={lStyle}>Internal Notes</label>
+        <input value={form.notes} onChange={e=>sf("notes",e.target.value)} placeholder="Notes about this management company" style={iStyle}/>
+      </div>
+      <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+        <Btn onClick={onDone}>Cancel</Btn>
+        <Btn primary onClick={handleSave} style={{background:saved?"#16a34a":undefined}}>
+          {saved?"✓ Saved!":"Save Changes"}
+        </Btn>
       </div>
     </div>
   );
@@ -1649,7 +1940,7 @@ export default function App() {
           {view==="customers" && !profileKey && <CustomersView customers={customers} setCustomers={setCustomers} ar={ar} onCustomer={openCustomer} mgmtCompanies={mgmtCompanies} onMgmt={openMgmtProfile} showToast={showToast}/>}
           {view==="customer"  && profileKey && <CustomerProfile k={profileKey} customers={customers} setCustomers={setCustomers} mgmtCompanies={mgmtCompanies} onBack={()=>{setView("customers");setProfileKey(null);}} showToast={showToast}/>}
           {view==="mgmt"      && <MgmtCompaniesView mgmtCompanies={mgmtCompanies} setMgmtCompanies={setMgmtCompanies} customers={customers} onMgmt={openMgmtProfile} showToast={showToast}/>}
-          {view==="mgmt-profile" && mgmtProfileId && <MgmtProfileView id={mgmtProfileId} mgmtCompanies={mgmtCompanies} customers={customers} onCustomer={openCustomer} onBack={()=>{setView("mgmt");setMgmtProfileId(null);}} showToast={showToast}/>}
+          {view==="mgmt-profile" && mgmtProfileId && <MgmtProfileView id={mgmtProfileId} mgmtCompanies={mgmtCompanies} setMgmtCompanies={setMgmtCompanies} customers={customers} onCustomer={openCustomer} onBack={()=>{setView("mgmt");setMgmtProfileId(null);}} showToast={showToast}/>}
           {view==="invoices"  && <InvoicesView customers={customers}/>}
           {view==="actions"   && <ActionsView ar={ar} customers={customers} onCustomer={openCustomer} showToast={showToast}/>}
           {view==="analytics" && <AnalyticsView ar={ar}/>}
